@@ -33,7 +33,7 @@ Client -> /agent-runs -> AgentLayer -> RunManager -> DockerRunner -> TraceManage
 ```bash
 curl -X POST http://localhost:8000/agent-runs \
   -H "Content-Type: application/json" \
-  -d '{"objective":"Write Python code that prints hello from the engine","max_attempts":3}'
+  -d '{"task":"Write Python code that prints hello from the engine","max_attempts":3}'
 ```
 
 ## Example Response
