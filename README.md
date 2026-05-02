@@ -2,9 +2,6 @@
 
 LLM proposes. System disposes.
 
-This runtime is used by higher-level agent systems such as:
-https://github.com/Slyog/lightwell-runtime-agent
-
 AI Execution Engine runs AI-generated Python code in an isolated Docker runtime and records each attempt as an inspectable trace. Exit code, stdout, stderr, timeout state, and status determine whether an attempt succeeded.
 
 ## What This Is
@@ -36,14 +33,34 @@ Client → /agent-runs → AgentLayer → RunManager → DockerRunner → TraceM
 ```bash
 curl -X POST http://localhost:8000/agent-runs \
   -H "Content-Type: application/json" \
-  -d '{"task":"Write Python code that prints hello from the engine","max_attempts":3}'
+  -d '{"objective":"Write Python code that prints hello from runtime","max_attempts":3}'
 ```
 
 ## Example Response
 
 ```json
-{"status":"completed","attempts":1,"final_stdout":"hello from the engine\n","trace_ids":["841c0fae-b854-431e-a48f-7b502da7aaf3"]}
+{
+  "status": "completed",
+  "attempts": 1,
+  "final_stdout": "hello from runtime\n",
+  "trace_ids": ["816ba0ca-7a32-4ebc-bcad-204237a5ebcb"]
+}
 ```
+
+## Example Run (Real Execution)
+
+```json
+{
+  "objective": "Write Python code that prints hello from runtime",
+  "generated_code": "print(\"hello from runtime\")",
+  "exit_code": 0,
+  "stdout": "hello from runtime",
+  "status": "completed",
+  "trace_id": "816ba0ca-7a32-4ebc-bcad-204237a5ebcb"
+}
+```
+
+The trace shows that correctness is determined by actual execution (exit code and stdout), not by model output alone.
 
 ## Design Principles
 
@@ -73,16 +90,9 @@ https://github.com/Slyog/lightwell-runtime-agent
 Lightwell is a separate layer that:
 
 - sends objectives to `/agent-runs`
-- observes real execution results
+- observes execution results
 - logs and classifies failures
-- provides a UI for interacting with the engine
-
-The separation is intentional:
-
-- This repository focuses on deterministic execution and runtime truth
-- Lightwell focuses on interaction, observation, and higher-level agent behavior
-
-In short:
+- provides a UI layer
 
 Execution Engine = runtime + truth layer
 Lightwell = interface + observation layer
