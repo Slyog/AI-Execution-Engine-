@@ -1,10 +1,11 @@
 # AI Execution Engine
 
-LLM proposes. System disposes.
+> LLM proposes. System disposes.
 
-This runtime is used by higher-level agent systems such as:
-https://github.com/Slyog/lightwell-runtime-agent
-https://github.com/Slyog/adaptive-execution
+This runtime is used by higher-level agent systems:
+
+- [Slyog/lightwell-runtime-agent](https://github.com/Slyog/lightwell-runtime-agent)
+- [Slyog/adaptive-execution](https://github.com/Slyog/adaptive-execution)
 
 ---
 
@@ -12,49 +13,60 @@ https://github.com/Slyog/adaptive-execution
 
 AI Execution Engine runs AI-generated Python code in an isolated Docker runtime and determines correctness through actual execution.
 
-Each attempt is executed, observed, and recorded as a trace.
-Exit code, stdout, stderr, timeout state, and status define whether an attempt succeeded.
+Each attempt is executed, observed, and recorded as a trace. Exit code, `stdout`, `stderr`, timeout state, and status define whether an attempt succeeded.
+
+---
+
+## System Overview
+
+This repository is part of a 3-layer execution system:
+
+| Layer | Role | Repo |
+|---|---|---|
+| **AI-Execution-Engine** *(this repo)* | Executes Python code in a deterministic Docker runtime | [Slyog/AI-Execution-Engine](https://github.com/Slyog/AI-Execution-Engine) |
+| **adaptive-execution** | Interprets failures and applies repair strategies | [Slyog/adaptive-execution](https://github.com/Slyog/adaptive-execution) |
+| **Tracewell Runtime** (UI) | Visualizes execution traces and decisions | [Slyog/lightwell-runtime-agent](https://github.com/Slyog/lightwell-runtime-agent) |
 
 ---
 
 ## What This Is
 
-* Controlled runtime for AI-generated Python code
-* Docker-based isolation
-* Deterministic execution results
-* Self-repair loop using real runtime feedback
-* Persisted sessions, runs, and traces
-
----
+- Controlled runtime for AI-generated Python code
+- Docker-based isolation
+- Deterministic execution results
+- Self-repair loop using real runtime feedback
+- Persisted sessions, runs, and traces
 
 ## What This Is Not
 
-* A chatbot
-* A code-generation demo
-* LLM-only verification
+- Not a chatbot
+- Not a code-generation demo
+- Not LLM-only verification
 
 ---
 
 ## Architecture
 
-The model proposes code. The system determines truth through execution.
+> The model proposes code. The system determines truth through execution.
 
-Raw execution path:
+**Raw execution path:**
 
-```txt
-Client -> /execute -> DockerRunner
+```text
+Client → /execute → DockerRunner
 ```
 
-Engine-native agent run:
+**Engine-native agent run:**
 
-```txt
-Client -> /agent-runs -> AgentLayer -> RunManager -> DockerRunner -> TraceManager
+```text
+Client → /agent-runs → AgentLayer → RunManager → DockerRunner → TraceManager
 ```
 
-- AgentLayer generates candidate Python code
-- RunManager orchestrates execution attempts
-- DockerRunner executes code in an isolated container
-- TraceManager records every attempt and result
+| Component | Role |
+|---|---|
+| `AgentLayer` | Generates candidate Python code |
+| `RunManager` | Orchestrates execution attempts |
+| `DockerRunner` | Executes code in an isolated container |
+| `TraceManager` | Records every attempt and result |
 
 ---
 
@@ -66,9 +78,7 @@ curl -X POST http://localhost:8000/agent-runs \
   -d '{"objective":"Write Python code that prints hello from runtime","max_attempts":3}'
 ```
 
----
-
-## Example Response
+**Response:**
 
 ```json
 {
@@ -79,11 +89,7 @@ curl -X POST http://localhost:8000/agent-runs \
 }
 ```
 
----
-
-## Example Run (Real Execution)
-
-A real execution result recorded by the engine:
+**Full trace (real execution):**
 
 ```json
 {
@@ -96,70 +102,64 @@ A real execution result recorded by the engine:
 }
 ```
 
-The trace shows that correctness is determined by actual execution (exit code and stdout), not by model output alone.
+> Correctness is determined by actual execution (`exit_code` + `stdout`), not by model output alone.
 
 ---
 
 ## Design Principles
 
-This system exists because LLM output is unreliable until it has been executed.
+> This system exists because LLM output is unreliable until it has been executed.
 
-* Execution result is the source of truth
-* Status is never decided by the model
-* Failed runs are repaired from observed runtime output
-* Retries are explicit and traceable
-* Session state is deterministic and file-backed
+- Execution result is the source of truth
+- Status is never decided by the model
+- Failed runs are repaired from observed runtime output
+- Retries are explicit and traceable
+- Session state is deterministic and file-backed
 
 ---
 
 ## System Composition
 
-This repository provides the runtime and truth layer. It executes code and
-returns observed results such as stdout, stderr, and exit_code. Correctness is
-determined by execution, not by a model claim.
+The separation between layers is intentional. AI Execution Engine stays independent — higher-level systems use it, but this repository is not responsible for their behavior.
 
-- **AI Execution Engine** -> runtime + truth layer. Executes Python code in Docker
-  and returns stdout, stderr, and exit_code.
-- **Lightwell Runtime Agent** -> observation layer. Reads and logs runtime traces,
-  providing history, inspection, and aggregation.
-- **adaptive-execution** -> adaptive layer. Proposes code, executes it through AI
-  Execution Engine, observes failures, and retries with failure context to
-  demonstrate feedback-driven improvement over attempts.
+| Layer | Role |
+|---|---|
+| **AI Execution Engine** *(this repo)* | Runtime + truth layer. Executes Python code in Docker and returns `stdout`, `stderr`, `exit_code`. |
+| **adaptive-execution** | Adaptive layer. Proposes code, observes failures, retries with failure context. |
+| **Lightwell Runtime Agent** | Observation layer. Reads and logs runtime traces, providing history and inspection. |
 
-System flow:
+**System flow:**
 
-```txt
-Higher-level adaptive layer:
-adaptive-execution -> /execute -> AI Execution Engine -> DockerRunner
+```text
+# Adaptive layer
+adaptive-execution → /execute → AI Execution Engine → DockerRunner
 
-Engine-native agent run:
-Client -> /agent-runs -> AgentLayer -> RunManager -> DockerRunner -> TraceManager
+# Engine-native agent run
+Client → /agent-runs → AgentLayer → RunManager → DockerRunner → TraceManager
 
-Observation layer:
-AI Execution Engine traces -> Lightwell Runtime Agent
+# Observation layer
+AI Execution Engine traces → Lightwell Runtime Agent
 ```
-
-The separation is intentional:
-AI Execution Engine stays independent. Higher-level systems can use it, but this
-repository is not responsible for their behavior.
 
 ---
 
-## Running Locally
+## How To Run (Local)
+
+**Install dependencies:**
 
 ```bash
 pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Set in `.env`:
+**Set in `.env`:**
 
-```txt
+```env
 OPENAI_API_KEY=your_key
 SESSION_DATA_DIR=./data/sessions
 ```
 
-Start the engine:
+**Start the engine:**
 
 ```bash
 uvicorn api:app --host 0.0.0.0 --port 8000
@@ -169,25 +169,22 @@ uvicorn api:app --host 0.0.0.0 --port 8000
 
 ## Local Sandbox-To-Host API Test
 
-For local API debugging demos, start `adaptive-execution` on port `8880`.
-Then start AI Execution Engine on port `8000` and execute the deterministic
-sandbox run example:
+For local API debugging, start `adaptive-execution` on port `8880`, then start AI Execution Engine on port `8000` and run:
 
 ```bash
 python scripts/run_demo_users_sandbox.py
 ```
 
-The example posts `scripts/test_demo_users_local.py` to `/sandbox-runs` with
-`allow_network=true`, so the code is executed directly without LLM generation.
+This posts `scripts/test_demo_users_local.py` to `/sandbox-runs` with `allow_network=true` — code is executed directly without LLM generation.
 
 The script calls the local demo API through:
 
-```txt
+```text
 http://host.docker.internal:8880/demo/users
 ```
 
-Expected status sequence:
+**Expected status sequence:**
 
-```txt
-401 -> 400 -> 200
+```text
+401 → 400 → 200
 ```
