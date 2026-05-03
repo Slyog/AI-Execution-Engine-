@@ -126,7 +126,7 @@ The separation between layers is intentional. AI Execution Engine stays independ
 |---|---|
 | **AI Execution Engine** *(this repo)* | Runtime + truth layer. Executes Python code in Docker and returns `stdout`, `stderr`, `exit_code`. |
 | **adaptive-execution** | Adaptive layer. Proposes code, observes failures, retries with failure context. |
-| **Lightwell Runtime Agent** | Observation layer. Reads and logs runtime traces, providing history and inspection. |
+| **Trace UI Runtime** | Observation layer. Reads and logs runtime traces, providing history and inspection. |
 
 **System flow:**
 
