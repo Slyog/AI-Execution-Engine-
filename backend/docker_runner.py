@@ -1,4 +1,6 @@
+import os
 import subprocess
+import sys
 import time
 
 
@@ -19,6 +21,12 @@ class DockerRunner:
         self.memory_limit = memory_limit
         self.cpu_quota = cpu_quota
         self.network_disabled = network_disabled
+        self.docker_host, self.docker_host_source = self._select_docker_host()
+        print(
+            f"[DockerRunner] docker_host={self.docker_host or 'docker-cli-default'} "
+            f"source={self.docker_host_source} platform={sys.platform}",
+            flush=True,
+        )
 
     def run_python(self, code: str, allow_network: bool = False) -> dict:
         started_at = time.monotonic()
@@ -105,17 +113,24 @@ class DockerRunner:
             command.extend(["--add-host", "host.docker.internal:host-gateway"])
 
         command.extend([self.image, "python", "-I", "-c", code])
+        add_host_gateway_enabled = self._command_has_host_gateway(command)
 
         print("[DockerRunner] starting docker run")
         print(f"[DockerRunner] network={'none' if network_disabled else 'enabled'}")
         print(f"[DockerRunner] code={code}")
-        print(f"[DockerRunner] cmd={' '.join(command)}")
+        print(
+            "[DockerRunner] host_gateway_mapping="
+            f"{str(add_host_gateway_enabled).lower()} platform={sys.platform}",
+            flush=True,
+        )
+        print(f"[DockerRunner] cmd={' '.join(command)}", flush=True)
         start_time = time.monotonic()
 
         process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            env=self._docker_environment(),
         )
         print("[DockerRunner] process started")
 
@@ -179,6 +194,27 @@ class DockerRunner:
         if len(data) > MAX_OUTPUT_BYTES:
             data = data[:MAX_OUTPUT_BYTES]
         return data.decode("utf-8", errors="replace")
+
+    def _select_docker_host(self) -> tuple[str | None, str]:
+        configured_host = os.getenv("DOCKER_HOST", "").strip()
+        if configured_host:
+            if configured_host.lower().startswith("npipe:") and sys.platform != "win32":
+                return "unix:///var/run/docker.sock", "linux-default-ignored-npipe-docker-host"
+            return configured_host, "DOCKER_HOST"
+        if sys.platform == "win32":
+            return None, "docker-cli-default"
+        return "unix:///var/run/docker.sock", "linux-default"
+
+    def _docker_environment(self) -> dict:
+        env = os.environ.copy()
+        if self.docker_host:
+            env["DOCKER_HOST"] = self.docker_host
+        elif "DOCKER_HOST" not in os.environ:
+            env.pop("DOCKER_HOST", None)
+        return env
+
+    def _command_has_host_gateway(self, command: list[str]) -> bool:
+        return "--add-host" in command and "host.docker.internal:host-gateway" in command
 
     def _result(
         self,
