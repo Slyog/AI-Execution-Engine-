@@ -25,7 +25,7 @@ This repository is part of a 3-layer execution system:
 |---|---|---|
 | **AI-Execution-Engine** *(this repo)* | Executes Python code in a deterministic Docker runtime | [Slyog/AI-Execution-Engine](https://github.com/Slyog/AI-Execution-Engine) |
 | **adaptive-execution** | Interprets failures and applies repair strategies | [Slyog/adaptive-execution](https://github.com/Slyog/adaptive-execution) |
-| **Tracewell Runtime** (UI) | Visualizes execution traces and decisions | [Slyog/lightwell-runtime-agent](https://github.com/Slyog/lightwell-runtime-agent) |
+| **Tracewell Runtime** (UI) | Visualizes execution traces and decisions | [Slyog/execution-trace-ui](https://github.com/Slyog/execution-trace-ui) |
 
 ---
 
