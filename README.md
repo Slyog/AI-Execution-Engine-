@@ -4,6 +4,7 @@ LLM proposes. System disposes.
 
 This runtime is used by higher-level agent systems such as:
 https://github.com/Slyog/lightwell-runtime-agent
+https://github.com/Slyog/adaptive-execution
 
 ---
 
@@ -38,8 +39,16 @@ Exit code, stdout, stderr, timeout state, and status define whether an attempt s
 
 The model proposes code. The system determines truth through execution.
 
+Raw execution path:
+
 ```txt
-Client → /agent-runs → AgentLayer → RunManager → DockerRunner → TraceManager
+Client -> /execute -> DockerRunner
+```
+
+Engine-native agent run:
+
+```txt
+Client -> /agent-runs -> AgentLayer -> RunManager -> DockerRunner -> TraceManager
 ```
 
 - AgentLayer generates candidate Python code
@@ -105,13 +114,34 @@ This system exists because LLM output is unreliable until it has been executed.
 
 ## System Composition
 
-This repository provides the runtime layer of a larger system.
+This repository provides the runtime and truth layer. It executes code and
+returns observed results such as stdout, stderr, and exit_code. Correctness is
+determined by execution, not by a model claim.
 
-- **AI Execution Engine** → runtime + truth layer
-- **Lightwell Runtime Agent** → interface + observation layer
+- **AI Execution Engine** -> runtime + truth layer. Executes Python code in Docker
+  and returns stdout, stderr, and exit_code.
+- **Lightwell Runtime Agent** -> observation layer. Reads and logs runtime traces,
+  providing history, inspection, and aggregation.
+- **adaptive-execution** -> adaptive layer. Proposes code, executes it through AI
+  Execution Engine, observes failures, and retries with failure context to
+  demonstrate feedback-driven improvement over attempts.
+
+System flow:
+
+```txt
+Higher-level adaptive layer:
+adaptive-execution -> /execute -> AI Execution Engine -> DockerRunner
+
+Engine-native agent run:
+Client -> /agent-runs -> AgentLayer -> RunManager -> DockerRunner -> TraceManager
+
+Observation layer:
+AI Execution Engine traces -> Lightwell Runtime Agent
+```
 
 The separation is intentional:
-execution is isolated from interaction and agent behavior.
+AI Execution Engine stays independent. Higher-level systems can use it, but this
+repository is not responsible for their behavior.
 
 ---
 
